@@ -161,7 +161,7 @@ with st.expander("📋 Fine Slab Reference", expanded=False):
     <div class="slab-row"><span>Every +3 days after</span><span class="amt">+₹50 per day in that slab</span></div>
 </div>
 <br><small style="color:#555;font-family:'DM Mono',monospace;">
-Late = Punch 1 strictly between 09:30 and 09:59 (inclusive of 09:30, exclusive of 10:00)
+Late = Punch 1 between 09:31 and 09:59 · Saturdays are ignored
 </small>
 """, unsafe_allow_html=True)
 
@@ -201,7 +201,7 @@ def parse_and_process(file) -> pd.DataFrame:
     if punch_col not in df.columns:
         raise ValueError(f"Column '{punch_col}' not found. Columns: {list(df.columns)}")
 
-    LATE_START = time(9, 30)
+    LATE_START = time(9, 31)
     LATE_END   = time(10, 0)
 
     results = []
@@ -209,6 +209,16 @@ def parse_and_process(file) -> pd.DataFrame:
     for (emp_id, emp_name), group in df.groupby(["EmpID", "EmpName"]):
         late_days = []
         for _, row in group.iterrows():
+            # Skip Saturdays
+            import datetime
+            date_raw = str(row.get("Date", "")).strip()
+            try:
+                date_obj = datetime.datetime.strptime(date_raw, "%d-%b-%Y").date()
+                if date_obj.weekday() == 5:  # 5 = Saturday
+                    continue
+            except Exception:
+                pass  # If date can't be parsed, don't skip
+
             punch1_raw = str(row.get(punch_col, "")).strip()
             if not punch1_raw or punch1_raw in ("", "nan"):
                 continue
